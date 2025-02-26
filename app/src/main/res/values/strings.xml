@@ -1,0 +1,10 @@
+<resources>
+    <string name="app_name">Record Logger</string>
+    <string name="app_title">Record Logger</string>
+    <!-- Other string resources -->
+    <string name="record_now">Record Now</string>
+    <string name="export_data">Export Data</string>
+    <string name="export_success">Data exported successfully.</string>
+    <string name="location_permission_not_granted">Location permission not granted.</string>
+    <string name="record_saved">Record saved.</string>
+</resources>
