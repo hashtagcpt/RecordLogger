@@ -1,0 +1,32 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="107.7dp"
+    android:height="122.88dp"
+    android:viewportWidth="107.7"
+    android:viewportHeight="122.88">
+
+    <!-- Background (Blue) -->
+    <path
+        android:fillColor="#0000FF"
+        android:pathData="M0,0h107.7v122.88h-107.7z" />
+
+    <!-- Shadow Circle (Black), offset for shadow -->
+    <path
+        android:fillColor="#000000"
+        android:pathData="
+            M53.85,61.44
+            m -25,0
+            a 25,25 0 1,0 50,0
+            a 25,25 0 1,0 -50,0"
+        android:translateX="16"
+        android:translateY="16" />
+
+    <!-- Foreground Circle (Gray), centered -->
+    <path
+        android:fillColor="#808080"
+        android:pathData="
+            M53.85,61.44
+            m -25,0
+            a 25,25 0 1,0 50,0
+            a 25,25 0 1,0 -50,0" />
+
+</vector>

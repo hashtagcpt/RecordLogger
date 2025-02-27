@@ -1,10 +1,8 @@
 <resources>
-    <string name="app_name">WreckLog</string>
-    <string name="app_title">WreckLog</string>
+    <string name="app_name">ALog</string>
     <!-- Other string resources -->
     <string name="record_now">Log Now</string>
     <string name="export_data">Export Data</string>
-    <string name="export_success">Data exported successfully.</string>
     <string name="location_permission_not_granted">Location permission not granted.</string>
     <string name="record_saved">Record saved.</string>
 </resources>

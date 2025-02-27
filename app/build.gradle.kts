@@ -40,13 +40,13 @@ android {
 }
 
 dependencies {
-    implementation("com.google.android.gms:play-services-location:21.3.0") // Check for the latest version
-    implementation("androidx.appcompat:appcompat:1.7.0") // Or the latest version available
-    implementation("com.google.android.gms:play-services-location:21.3.0")
+    implementation(libs.gms.play.services.location) // Check for the latest version
+    implementation("androidx.appcompat:appcompat:1.7.1") // Or the latest version available
+    implementation(libs.gms.play.services.location)
     implementation("com.google.code.gson:gson:2.10.1") // Add this line for Gson
-    implementation("androidx.activity:activity-ktx:1.10.1") // or a newer stable version
+    implementation(libs.androidx.activity.ktx) // or a newer stable version
     implementation("androidx.constraintlayout:constraintlayout:2.2.1") // or a later stable version
-
+    implementation(libs.androidx.room.gradle.plugin)
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
