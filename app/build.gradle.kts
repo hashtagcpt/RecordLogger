@@ -45,6 +45,7 @@ dependencies {
     implementation("com.google.android.gms:play-services-location:21.3.0")
     implementation("com.google.code.gson:gson:2.10.1") // Add this line for Gson
     implementation("androidx.activity:activity-ktx:1.10.1") // or a newer stable version
+    implementation("androidx.constraintlayout:constraintlayout:2.2.1") // or a later stable version
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.core.ktx)

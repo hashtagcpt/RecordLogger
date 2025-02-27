@@ -2,42 +2,69 @@ package com.example.recordlogger
 
 import android.Manifest
 import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Bundle
+import android.view.MotionEvent
 import android.widget.ArrayAdapter
 import android.widget.Button
 import android.widget.ListView
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
+import androidx.compose.foundation.background
 import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
 import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationServices
 import com.google.gson.Gson
-import android.net.Uri
-import android.content.ContentValues
-import android.os.Environment
-import android.provider.MediaStore
-import androidx.activity.result.IntentSenderRequest
-import java.util.*
-
-
+import java.util.Date
 
 class MainActivity : AppCompatActivity() {
 
     private lateinit var fusedLocationClient: FusedLocationProviderClient
-    private val records = mutableListOf<Record>()
+    private val logRecords = mutableListOf<LogRecord>()
     private lateinit var adapter: ArrayAdapter<String>
+    private var pressStartTime: Long = 0
+    private var initialX: Float = 0f
+    private val swipeThreshold = 100 // threshold in pixels for a swipe
 
     // Launcher for creating document (export)
     private val exportLauncher = registerForActivityResult(
         ActivityResultContracts.CreateDocument("application/json")
     ) { uri ->
         if (uri != null) {
-            contentResolver.openOutputStream(uri)?.use { output ->
-                val jsonString = Gson().toJson(records)
-                output.write(jsonString.toByteArray())
-                Toast.makeText(this, getString(R.string.export_success), Toast.LENGTH_SHORT).show()
-            }
+            writeDataToUri(uri)
+        } else {
+            Toast.makeText(this, "Export cancelled", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    private fun recordData(pressDuration: Long, swipeOption: Int) {
+        val timestamp = System.currentTimeMillis()
+        if (ActivityCompat.checkSelfPermission(
+                this,
+                Manifest.permission.ACCESS_FINE_LOCATION
+            ) != PackageManager.PERMISSION_GRANTED
+        ) {
+            Toast.makeText(
+                this,
+                getString(R.string.location_permission_not_granted),
+                Toast.LENGTH_SHORT
+            ).show()
+            return
+        }
+        fusedLocationClient.lastLocation.addOnSuccessListener { location ->
+            val logRecord = LogRecord(
+                timestamp = timestamp,
+                latitude = location?.latitude,
+                longitude = location?.longitude,
+                pressDuration = pressDuration,
+                swipeOption = swipeOption
+            )
+            logRecords.add(logRecord)
+            adapter.add("Time: ${Date(timestamp)} | Loc: ${logRecord.latitude ?: "N/A"}, ${logRecord.longitude ?: "N/A"} | Duration: ${pressDuration}ms | Swipe: $swipeOption")
+            adapter.notifyDataSetChanged()
+            Toast.makeText(this, getString(R.string.record_saved), Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -45,53 +72,62 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        // Initialize location client
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
 
-        // Setup ListView adapter to show records (as strings)
-        val recordsListView = findViewById<ListView>(R.id.recordsListView)
-        adapter = ArrayAdapter(this, android.R.layout.simple_list_item_1, mutableListOf())
-        recordsListView.adapter = adapter
+        setupRecordButton()
+        setupRecordsListView()
+        setupExportButton()
+        checkLocationPermissions()
+    }
 
-        // Handle Record button click
-        findViewById<Button>(R.id.recordButton).setOnClickListener {
-            recordData()
-        }
+    private fun setupRecordButton() {
+        val recordButton = findViewById<Button>(R.id.recordButton)
+        recordButton.setOnTouchListener { _, event ->
+            when (event.action) {
+                MotionEvent.ACTION_DOWN -> {
+                    pressStartTime = System.currentTimeMillis()
+                    initialX = event.x
+                    true
+                }
 
-        // Handle Export button click
-        findViewById<Button>(R.id.exportButton).setOnClickListener {
-            exportData()
-        }
+                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                    val pressDuration = System.currentTimeMillis() - pressStartTime
+                    val deltaX = event.x - initialX
+                    val swipeOption = when {
+                        deltaX > swipeThreshold -> 1
+                        deltaX < -swipeThreshold -> 0
+                        else -> 0
+                    }
+                    recordData(pressDuration, swipeOption)
+                    true
+                }
 
-        // Check location permissions (simplified version)
-        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
-            != PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(
-                this, arrayOf(Manifest.permission.ACCESS_FINE_LOCATION), 1001
-            )
+                else -> false
+            }
         }
     }
 
-    private fun recordData() {
-        // Get current timestamp
-        val timestamp = System.currentTimeMillis()
-        // Request last known location (requires permission)
-        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
-            != PackageManager.PERMISSION_GRANTED) {
-            Toast.makeText(this, getString(R.string.location_permission_not_granted), Toast.LENGTH_SHORT).show()
-            return
+    private fun setupRecordsListView() {
+        val recordsListView = findViewById<ListView>(R.id.recordsListView)
+        adapter = ArrayAdapter(this, android.R.layout.simple_list_item_1, mutableListOf())
+        recordsListView.adapter = adapter
+    }
+
+    private fun setupExportButton() {
+        findViewById<Button>(R.id.exportButton).setOnClickListener {
+            exportData()
         }
-        fusedLocationClient.lastLocation.addOnSuccessListener { location ->
-            val record = Record(
-                timestamp = timestamp,
-                latitude = location?.latitude,
-                longitude = location?.longitude
+    }
+
+    private fun checkLocationPermissions() {
+        if (ActivityCompat.checkSelfPermission(
+                this,
+                Manifest.permission.ACCESS_FINE_LOCATION
+            ) != PackageManager.PERMISSION_GRANTED
+        ) {
+            ActivityCompat.requestPermissions(
+                this, arrayOf(Manifest.permission.ACCESS_FINE_LOCATION), 1001
             )
-            records.add(record)
-            // Update ListView adapter with a formatted string showing the record details
-            adapter.add("Time: ${Date(timestamp)} | Loc: ${record.latitude ?: "N/A"}, ${record.longitude ?: "N/A"}")
-            adapter.notifyDataSetChanged()
-            Toast.makeText(this, getString(R.string.record_saved), Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -101,16 +137,14 @@ class MainActivity : AppCompatActivity() {
         ActivityResultContracts.StartIntentSenderForResult()
     ) { result ->
         if (result.resultCode == RESULT_OK) {
-            // User approved, now write the data
-            fileUri?.let { uri -> writeDataToUri(uri)}
+            fileUri?.let { uri -> writeDataToUri(uri) }
         } else {
             Toast.makeText(this, "Write permission not granted", Toast.LENGTH_SHORT).show()
         }
     }
 
     private fun writeDataToUri(uri: Uri) {
-        // Convert your records to JSON (ensure you have the Gson dependency)
-        val jsonString = Gson().toJson(records)
+        val jsonString = Gson().toJson(logRecords)
         try {
             contentResolver.openOutputStream(uri)?.use { output ->
                 output.write(jsonString.toByteArray())
@@ -123,35 +157,14 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun exportData() {
-        // Step 1: Insert a new file entry into MediaStore
-        val values = ContentValues().apply {
-            put(MediaStore.MediaColumns.DISPLAY_NAME, "records_${System.currentTimeMillis()}.json")
-            put(MediaStore.MediaColumns.MIME_TYPE, "application/json")
-            put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_DOCUMENTS)
-        }
-
-        fileUri = contentResolver.insert(MediaStore.Files.getContentUri("external"), values)
-        if (fileUri == null) {
-            Toast.makeText(this, "Failed to create file", Toast.LENGTH_SHORT).show()
-            return
-        }
-
-        // Step 2: Request write access using MediaStore.createWriteRequest (API 33+)
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
-            val intent = MediaStore.createWriteRequest(contentResolver, listOf(fileUri!!))
-            try {
-                // Launch the intent to get user permission
-                writePermissionLauncher.launch(
-                    IntentSenderRequest.Builder(intent).build()
-                )
-            } catch (e: Exception) {
-                Toast.makeText(this, "Error launching write request", Toast.LENGTH_SHORT).show()
-                e.printStackTrace()
-            }
-        } else {
-            // For earlier API levels, you can directly write to fileUri using an output stream
-            writeDataToUri(fileUri!!)
-        }
+        exportLauncher.launch("records_${System.currentTimeMillis()}.json")
     }
-
 }
+
+data class LogRecord(
+    val timestamp: Long,
+    val latitude: Double?,
+    val longitude: Double?,
+    val pressDuration: Long,
+    val swipeOption: Int
+)
